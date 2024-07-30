@@ -540,10 +540,25 @@ class ReactionSet(MSONable):
             The new ReactionSet containing the recalculated reactions.
         """
         new_rxns = []
-        for rxn in self.get_rxns():
-            new_rxns.append(rxn.get_new_temperature(new_temp))
+        entries = { e.composition: e.get_new_temperature(new_temp) for e in self.entries }
+        for rxn in tqdm(list(self.get_rxns())):
+            new_rxns.append(rxn.get_new_temperature(new_temp, entries))
 
         return ReactionSet.from_rxns(new_rxns, open_elem=self.open_elem, chempot=self.chempot)
+
+    def compute_at_temperatures(self, temp_list: list) -> dict:
+        all_rxns = list(self.get_rxns())
+        print("Reactions constructed...")
+        result = {}
+        for t in tqdm(temp_list, desc="Computing reaction energies..."):
+            print(t)
+            new_rxns = []
+            entries = { e.composition: e.get_new_temperature(t) for e in self.entries }
+            for rxn in all_rxns:
+                new_rxns.append(rxn.get_new_temperature(t, entries))
+
+            result[t] = ReactionSet.from_rxns(new_rxns, open_elem=self.open_elem, chempot=self.chempot)        
+        return result
 
     def _get_rxns_by_indices(self, idxs) -> Iterable[ComputedReaction | OpenComputedReaction]:
         """Return a list of reactions with the given indices."""
